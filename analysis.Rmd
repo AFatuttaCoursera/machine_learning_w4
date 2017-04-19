@@ -1,0 +1,268 @@
+---
+title: "Machine Learning - Classe prediction"
+author: "Andrea Fatutta"
+date: "19 april 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(e1071)
+library(ggplot2)
+```
+
+## Synopsis
+
+In this assignment we will explore and analyze some data about fitness training of different subjects that has been collected using smart devices such *Jawbone Up, Nike FuelBand, and Fitbit*.
+
+The goal is to be able to classify with the lowest possible margin of error the class of each excercise that has been recorded and submit the result of the predictions to be evaluated.
+
+*Source: Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6.*
+
+*Link: <http://groupware.les.inf.puc-rio.br/har>*
+
+##Data processing
+In this section data will be loaded and explored, below a brief summary of the data structure, once it has been cleaned up for NA values and data that we will not use for prediction.
+
+```{r expl0, echo=FALSE}
+trainData <- read.csv(file = "pml-training.csv", header = TRUE, na.strings = c("NA","#DIV/0!",""), stringsAsFactors = FALSE)
+
+trainData$classe<-factor(trainData$classe)
+```
+
+The basic data set contains `r nrow(trainData)` observation and `r ncol(trainData)` variables, therefore it will be hard to show even some rows in this document, but we can have a look at the "classe" variable that is what we need to predict.
+
+```{r expl1, echo=FALSE}
+summary(trainData$classe)
+
+```
+We can see that this variable contains 5 specific levels and therefore we will use some classification algorhythms that will allow us to use the continuos variables, i.e. acceleration, position, etc, to predict a discrete categorization for the class.
+
+At first we need to clean up the first 7 columns that contains informations about the data gathering and the columns that contains many NA values; all this columns therefore are not usable for prediction.
+
+```{r expl2, echo=FALSE}
+trainData<-trainData[,colSums(is.na(trainData)) == 0]
+trainData<-trainData[,-c(1:7)]
+
+quizData<-read.csv(file = "pml-testing.csv", header = TRUE, na.strings = c("NA","#DIV/0!",""), stringsAsFactors = FALSE)
+quizData<-quizData[,colSums(is.na(quizData)) == 0]
+quizData<-quizData[,-c(1:7)]
+
+##dividing trainData
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+```
+The final clean data set contains `r nrow(trainData)` observation and `r ncol(trainData)` variables, below a plot of the frequency for the 5 classe types.
+
+```{r expl3, echo=FALSE, warning=FALSE}
+plotData <- data.frame(cbind(names(table(trainData$classe)),table(trainData$classe) ))
+names(plotData)<- c("classe","num")
+
+ggplot( data = plotData, aes(x=classe, y = num,fill=classe)) +
+        geom_histogram( stat="identity") +
+        geom_text(aes(label=num), vjust=1.6, color="white",size=3.5, fontface = "bold") +
+        ggtitle("Frequency of CLASSE types in Train Dataset") +
+        xlab("CLASSE Type") +
+        ylab("#classe")
+```
+
+
+##Model selection/training
+Training data has been splitted in 2 parts, 75% for model training and 25% for results checking.
+
+I will use some models that has been presented during the course and others that I found on the web that are used for this purpose:
+
+1. Recursive Partitioning and Regression Trees ( with "rpart" library) <https://en.wikipedia.org/wiki/Recursive_partitioning>
+2. Random Forest ( with "randomForest" library) <https://en.wikipedia.org/wiki/Random_forest>
+3. Naive Bayes ( with "e1071" library) <https://en.wikipedia.org/wiki/Naive_Bayes_classifier>
+4. Support Vector Machines ( with "e1071" library) <https://en.wikipedia.org/wiki/Support_vector_machine>
+
+###Recursive Partitioning and Regression Trees
+```{r rpart0}
+# Fit model - regression tree
+fitRpart <- rpart(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRpart <- predict(fitRpart, trainDataControl, type = "class")
+```
+
+Here the plot of the tree classifications against all the remaining variables:
+
+```{r rpart1, out.height="800px", out.width="800px"}
+# Plot result
+rpart.plot(fitRpart, main="Classification Tree", extra=2, under=TRUE, cex=0.5 )
+```
+
+This is the confusion matrix for the predicted values against the original ones:
+
+```{r rpart2}
+cmRpart<-confusionMatrix(predictRpart, trainDataControl$classe)
+cmRpart
+```
+
+###Random Forest
+
+Here the confusion matrix for this model:
+
+```{r rforest}
+fitRForest <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRForest <- predict(fitRForest, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest <- confusionMatrix(predictRForest, trainDataControl$classe)
+cmForest
+
+```
+
+
+###Naive Bayes
+
+Here the confusion matrix for this model:
+
+```{r nb}
+##fit creation
+fitNB <- naiveBayes(classe~.,data = trainDataSet)
+
+##Perform prediction
+predictNB <- predict(fitNB, trainDataControl, type = "class")
+
+##confusion matrix
+cmNB<-confusionMatrix(predictNB, trainDataControl$classe)
+cmNB
+```
+
+###Support Vector Machines
+
+Here the confusion matrix for this model:
+
+```{r svm}
+##fit creation
+fitSVM <- svm(classe~.,data = trainDataSet)
+
+##Perform prediction
+predictSVM <- predict(fitSVM, trainDataControl, type = "class")
+
+##confusion matrix
+cmSVM<-confusionMatrix(predictSVM, trainDataControl$classe)
+cmSVM
+```
+
+##Conclusions
+The 4 models behaved differently against the control data with different levels of accuracy.
+
+1. Recursive Partitioning and Regression Trees: accuracy `r round(cmRpart$overall["Accuracy"],4)`, 95% CI `r paste( "[",round(cmRpart$overall["AccuracyLower"],4),",",round(cmRpart$overall["AccuracyUpper"],4),"]", sep = '') `
+
+2. Random Forest: accuracy `r round(cmForest$overall["Accuracy"],4)`, 95% CI `r paste( "[",round(cmForest$overall["AccuracyLower"],4),",",round(cmForest$overall["AccuracyUpper"],4),"]", sep = '') `
+
+3. Naive Bayes: accuracy `r round(cmNB$overall["Accuracy"],4)`, 95% CI `r paste( "[",round(cmNB$overall["AccuracyLower"],4),",",round(cmNB$overall["AccuracyUpper"],4),"]", sep = '') `
+
+4. Support Vector Machines: accuracy `r round(cmSVM$overall["Accuracy"],4)`, 95% CI `r paste( "[",round(cmSVM$overall["AccuracyLower"],4),",",round(cmSVM$overall["AccuracyUpper"],4),"]", sep = '') `
+
+With this data we can conclude that the best prediction model is given in this case by Random Forest, where we have an accuracy of more 99, thereofre the out-sample-error is very small (< 0.004 ) and we will use this method to predict the results for the assignment tests.
+
+##Assignment prediction generation
+This part will generate the prediction that will be needed the quiz part.
+
+
+```{r predAssignment}
+# Perform prediction
+predictQuiz <- predict(fitRForest, quizData, type = "class")
+
+predictQuiz
+```
+
+## Code Appendix
+
+```{r code, eval=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(e1071)
+library(ggplot2)
+
+trainData <- read.csv(file = "pml-training.csv", header = TRUE, na.strings = c("NA","#DIV/0!",""), stringsAsFactors = FALSE)
+
+trainData$classe<-factor(trainData$classe)
+summary(trainData$classe)
+
+trainData<-trainData[,colSums(is.na(trainData)) == 0]
+trainData<-trainData[,-c(1:7)]
+
+quizData<-read.csv(file = "pml-testing.csv", header = TRUE, na.strings = c("NA","#DIV/0!",""), stringsAsFactors = FALSE)
+quizData<-quizData[,colSums(is.na(quizData)) == 0]
+quizData<-quizData[,-c(1:7)]
+
+##dividing trainData
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+
+plotData <- data.frame(cbind(names(table(trainData$classe)),table(trainData$classe) ))
+names(plotData)<- c("classe","num")
+
+ggplot( data = plotData, aes(x=classe, y = num,fill=classe)) +
+        geom_histogram( stat="identity") +
+        geom_text(aes(label=num), vjust=1.6, color="white",size=3.5, fontface = "bold") +
+        ggtitle("Frequency of CLASSE types in Train Dataset") +
+        xlab("CLASSE Type") +
+        ylab("#classe")
+
+# Fit model - regression tree
+fitRpart <- rpart(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRpart <- predict(fitRpart, trainDataControl, type = "class")
+
+# Plot result
+rpart.plot(fitRpart, main="Classification Tree", extra=2, under=TRUE, cex=0.5 )
+
+cmRpart<-confusionMatrix(predictRpart, trainDataControl$classe)
+cmRpart
+
+fitRForest <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRForest <- predict(fitRForest, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest <- confusionMatrix(predictRForest, trainDataControl$classe)
+cmForest
+
+##fit creation
+fitNB <- naiveBayes(classe~.,data = trainDataSet)
+
+##Perform prediction
+predictNB <- predict(fitNB, trainDataControl, type = "class")
+
+##confusion matrix
+cmNB<-confusionMatrix(predictNB, trainDataControl$classe)
+cmNB
+
+##fit creation
+fitSVM <- svm(classe~.,data = trainDataSet)
+
+##Perform prediction
+predictSVM <- predict(fitSVM, trainDataControl, type = "class")
+
+##confusion matrix
+cmSVM<-confusionMatrix(predictSVM, trainDataControl$classe)
+cmSVM
+
+# Perform prediction
+predictQuiz <- predict(fitRForest, quizData, type = "class")
+
+predictQuiz
+```
