@@ -12,6 +12,9 @@ With the best method found we will try to predict the activity that has been don
 
 The data has been taken from <http://groupware.les.inf.puc-rio.br/har>.
 
+## GitHub Pages link:
+<https://afatuttacoursera.github.io/machine_learning_w4/analysis.html>
+
 ##Files
 
 - analysis.html: contains the report with the results
