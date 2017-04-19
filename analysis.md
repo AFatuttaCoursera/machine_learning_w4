@@ -53,6 +53,7 @@ quizData<-quizData[,colSums(is.na(quizData)) == 0]
 quizData<-quizData[,-c(1:7)]
 
 ##dividing trainData
+set.seed(1913283)
 splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
 trainDataSet <- trainData[splitData, ] 
 trainDataControl <- trainData[-splitData, ]
@@ -167,15 +168,77 @@ The 4 models behaved differently against the control data with different levels 
 
 4. Support Vector Machines: accuracy `r round(cmSVM$overall["Accuracy"],4)`, 95% CI `r paste( "[",round(cmSVM$overall["AccuracyLower"],4),",",round(cmSVM$overall["AccuracyUpper"],4),"]", sep = '') `
 
-With this data we can conclude that the best prediction model is given in this case by Random Forest, where we have an accuracy of more 99, thereofre the out-sample-error is very small (< 0.004 ) and we will use this method to predict the results for the assignment tests.
+With this data we can conclude that the best prediction model is given in this case by Random Forest, where we have an accuracy of more 99, therefore the out-sample-error is very small (< 0.004 ) and we will use this method to predict the results for the assignment tests.
+
+###Cross validation
+In this section I will try 3 new different splits of the original training set with random forest to see if we can get a better accuracy
+
+####Random Forest V2
+
+
+```{r rforest2}
+set.seed(987)
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+fitRForest2 <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRForest2 <- predict(fitRForest2, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest2 <- confusionMatrix(predictRForest2, trainDataControl$classe)
+cmForest2
+
+```
+
+####Random Forest V3
+
+```{r rforest3}
+set.seed(46458234)
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+fitRForest3 <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRForest3 <- predict(fitRForest3, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest3 <- confusionMatrix(predictRForest3, trainDataControl$classe)
+cmForest3
+
+```
+
+####Random Forest V4
+```{r rforest4}
+set.seed(1)
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+fitRForest4 <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRForest4 <- predict(fitRForest4, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest4 <- confusionMatrix(predictRForest4, trainDataControl$classe)
+cmForest4
+
+```
 
 ##Assignment prediction generation
-This part will generate the prediction that will be needed the quiz part.
-
+Being the 4 random forest results very similar, I will choose anyway the fourth fit model that has the higher accuracy.
 
 ```{r predAssignment}
-# Perform prediction
-predictQuiz <- predict(fitRForest, quizData, type = "class")
+# Perform Assignment prediction
+predictQuiz <- predict(fitRForest4, quizData, type = "class")
 
 predictQuiz
 ```
@@ -204,6 +267,7 @@ quizData<-quizData[,colSums(is.na(quizData)) == 0]
 quizData<-quizData[,-c(1:7)]
 
 ##dividing trainData
+set.seed(1913283)
 splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
 trainDataSet <- trainData[splitData, ] 
 trainDataControl <- trainData[-splitData, ]
@@ -261,8 +325,54 @@ predictSVM <- predict(fitSVM, trainDataControl, type = "class")
 cmSVM<-confusionMatrix(predictSVM, trainDataControl$classe)
 cmSVM
 
+set.seed(987)
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+fitRForest2 <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
 # Perform prediction
-predictQuiz <- predict(fitRForest, quizData, type = "class")
+predictRForest2 <- predict(fitRForest2, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest2 <- confusionMatrix(predictRForest2, trainDataControl$classe)
+cmForest2
+
+
+set.seed(46458234)
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+fitRForest3 <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRForest3 <- predict(fitRForest3, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest3 <- confusionMatrix(predictRForest3, trainDataControl$classe)
+cmForest3
+
+set.seed(1)
+splitData <- createDataPartition(trainData$classe, p=0.75, list=FALSE)
+trainDataSet <- trainData[splitData, ] 
+trainDataControl <- trainData[-splitData, ]
+
+fitRForest4 <- randomForest(classe ~ ., data=trainDataSet, method="class")
+
+# Perform prediction
+predictRForest4 <- predict(fitRForest4, trainDataControl, type = "class")
+
+##confusion matrix
+
+cmForest4 <- confusionMatrix(predictRForest4, trainDataControl$classe)
+cmForest4
+
+# Perform Assignment prediction
+predictQuiz <- predict(fitRForest4, quizData, type = "class")
 
 predictQuiz
 ```
