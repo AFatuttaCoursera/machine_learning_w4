@@ -15,7 +15,7 @@ The data has been taken from <http://groupware.les.inf.puc-rio.br/har>.
 ## GitHub Pages link:
 <https://afatuttacoursera.github.io/machine_learning_w4/analysis.html>
 
-##Files
+## Files
 
 - analysis.html: contains the report with the results
 
